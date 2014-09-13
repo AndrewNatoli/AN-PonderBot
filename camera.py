@@ -1,12 +1,16 @@
+import config
 import picamera
+
 __author__ = 'andrew'
 
 class Camera:
-
     def __init__(self):
-        cam = picamera.PiCamera()
+        self.cam = picamera.PiCamera()
 
     def testCapture(self):
-        cam.capture("test.jpg")
+        try:
+            self.cam.capture(config.__OUTPUT_DIR__ + "test.jpg")
+        except Exception:
+            print "Could not capture test photo"
 
 
