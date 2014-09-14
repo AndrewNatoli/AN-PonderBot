@@ -6,6 +6,7 @@ class CLI(threading.Thread):
 
     okToRun = True # Keeps the thread alive
     input = ""
+    stack = []
 
     def __init__(self):
         super(CLI, self).__init__()
@@ -22,6 +23,12 @@ class CLI(threading.Thread):
                     if words[0] == "shutdown":
                         print "Stopping the robot."
                         self.okToRun = False
+                    elif words[0] == "photo" or words[0] == "capture":
+                        if len(words) > 1:
+                            words[0] = "capture"
+                            self.stack.append(words)
+                        else:
+                            print "Missing second argument: filename."
                     else:
                         print "Unknown command, " + str(words[0])
 

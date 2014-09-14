@@ -10,8 +10,25 @@ __author__ = 'andrew'
 okToRun = True
 toDo = "test"
 
-print "Hello World!"
+def do_task(task):
+    print "Got a task: " + str(task)
+    if task[0] == "capture":
+        camera.capture(task[1])
 
+
+""" Run the program! """
+
+print "Hello World!"
+print "======================================================="
+print "PonderBot v" + str(config.__VERSION__) + " by Andrew Natoli"
+print "AndrewNatoli@AndrewNatoli.com"
+print "http://AndrewNatoli.com"
+print "USE THIS SOFTWARE AT YOUR OWN RISK. I'm not responsible"
+print "if this breaks anything!"
+print "======================================================="
+
+
+#Database is initialized when we import the database module so this will work ;)
 database.db.test.find()
 
 #Command line interface
@@ -24,11 +41,7 @@ camera.start()
 
 #Initialize and run the RaspiRobot thread
 raspirobot = RaspiRobot()
-if raspirobot.okToRun == True:
-    raspirobot.start()
-else:
-    print "Can't use Raspi Robot Board. Quitting."
-    exit()
+raspirobot.start() # We used to check okToRun before calling this but now the thread does that itself.
 
 #Capture a test photo
 camera.capture("test.jpg")
@@ -37,11 +50,19 @@ camera.capture("test.jpg")
 while okToRun:
     # Make sure everything is going alright...
     if raspirobot.okToRun and camera.okToRun and cli.okToRun:
-        okToRun = True
-        sleep(1)
+        # Look for something to do!
+        if len(cli.stack) > 0:
+            try:
+                do_task(cli.stack.pop())
+            except Exception, e:
+                print "Failed to handle task: " + str(e)
+        else:
+            # If there's nothing to do sleep for a second.
+            sleep(1)
     else:
         print "Something is amiss... STOPPING ROBOT."
         okToRun = False
+
 
 # Shut down
 cli.kill()
