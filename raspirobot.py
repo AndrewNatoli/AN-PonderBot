@@ -19,6 +19,9 @@ class RaspiRobot(threading.Thread):
     goingForward = False        # Going forward?
     goingReverse = False        # Going in reverse?
 
+    moveTime = 0                # How many iterations have we been moving for?
+    stopTime = 0                # Stop moving after this many iterations of the run loop
+
     leftCollision = False       # Status of left lever switch used as a collision detector
     rightCollision = False      # Status of right lever switch used as a collision detector
 
@@ -45,30 +48,68 @@ class RaspiRobot(threading.Thread):
     # Run the robot!
     def run(self):
         print "Running Raspi Robot"
-        while self.okToRun == True:
+
+        self.forward()
+        while self.okToRun:
+            # Check the sonar reading
+            self.distance = self.rr.get_distance()
+
+            self.moveTime += 1
+
+            # If we've been going in a certain direction for too long, stop ourselves.
+            if self.moveTime >= self.stopTime:
+                print "Move completed."
+                self.stop()
+            else:
+                print self.moveTime + " / " + self.stopTime
+
             # Check for side collisions first
             self.leftCollision = self.rr.sw1_closed()
             self.rightCollision = self.rr.sw2_closed()
 
-            if self.leftCollision || self.rightCollision:
+            if self.leftCollision or self.rightCollision:
                 # Did we move forward into something?
+                if self.goingForward:
+                    print "Crashed into something while moving forward. Stopping."
+                    self.stop()
 
 
-
-            # Check the sonar reading
-            self.distance = self.rr.get_distance()
-
-    def forward(self,time):
+    # Start moving forward
+    def forward(self,time=200):
         self.stop()
-        print "Moving forward for " + time + " seconds."
-        self.rr.forward(time)
+        try:
+            self.rr.set_motors(1,0,1,0)
+            self.goingForward = True
+            self.stopTime = time
+            print "Moving forward for " + time + " ticks."
+        except Exception:
+            print "Can't move forward! D:"
+            self.stop()
 
+
+    # Start moving in reverse
+    def reverse(self,time=200):
+        self.stop()
+        try:
+            self.rr.set_motors(1,1,1,1)
+            self.goingReverse = True
+            self.stopTime = time
+            print "Backing up for " + time + " ticks."
+        except Exception:
+            print "Can't back up!"
+            self.stop()
+
+
+    # Stop the robot. If we can't, shut it down.
     def stop(self):
         self.goingForward = False
         self.goingReverse = False
         self.turningLeft = False
         self.turningRight = False
+        self.moveTime = 0
+        self.stopTime = 0
         try:
+            print "Stopping"
             self.rr.stop()
             return
         except Exception:
@@ -86,29 +127,20 @@ class RaspiRobot(threading.Thread):
 
     # First LED on the board
     def led1(self,boolean):
-        if boolean == True || boolean == False:
-            self.rr.set_oc1(boolean)
-        else:
-            print "Invalid parameter for raspirobot.led3"
+        self.rr.set_oc1(boolean)
 
 
     # Second LED on the board
     def led2(self,boolean):
-        if boolean == True || boolean == False:
-            self.rr.set_led1(boolean)
-        else:
-            print "Invalid parameter for raspirobot.led3"
+        self.rr.set_led1(boolean)
 
 
     # The extra LED sitting in the first open collector output
-    def led3(self,boolean):
-        if boolean == True || boolean == False:
-            self.rr.set_led2(boolean)
-        else:
-            print "Invalid parameter for raspirobot.led3"
 
+def led3(self,boolean):
+    self.rr.set_led2(boolean)
 
-    def kill(self):
+def kill(self):
         print "Killed Raspi Robot Thread."
         self.okToRun = False
 

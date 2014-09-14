@@ -1,9 +1,20 @@
+import atexit
 import database
+import os
 from camera import *
 from raspirobot import *
 from time import sleep
 
 __author__ = 'andrew'
+
+# Register an exit handler to shut down mongo db.
+# Read the database.py documentation to learn why we have this going on....
+def exitHandler():
+    print "Exit called! Shut down MongoDB"
+    os.system("mongod --shutdown")
+    print "Hopefully that worked..."
+
+atexit.register(exitHandler)
 
 print "Hello World!"
 
