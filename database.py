@@ -32,7 +32,7 @@ mongod.start()
 # Wait a little bit and then we'll try connecting to it!
 # If we can't connect, repair the mongo db, restart it and then try the connection again.
 # If it doesn't work... just.... let the program explode.
-sleep(1.5)
+sleep(3)
 try:
     print "Connecting to MongoDB"
     client = MongoClient()
@@ -44,7 +44,7 @@ except Exception:
     print "Starting over..."
     mongod = MongoDB()
     mongod.start()
-    sleep(1)
+    sleep(3)
     try:
         print "Connecting to MongoDB (take 2)"
         client = MongoClient()

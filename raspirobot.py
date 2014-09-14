@@ -3,8 +3,9 @@
 """
 
 __author__ = 'andrew'
-import threading
 import os
+import threading
+import config
 from rrb2 import *
 from time import sleep
 
@@ -40,6 +41,7 @@ class RaspiRobot(threading.Thread):
             self.led2(False)
             self.okToRun = True
             print "Raspi Robot Initialized."
+            self.forward()
         except Exception:
             self.okToRun = False
             print "Failed to initialize RaspiRobot Board"
@@ -48,20 +50,21 @@ class RaspiRobot(threading.Thread):
     # Run the robot!
     def run(self):
         print "Running Raspi Robot"
-
-        self.forward()
         while self.okToRun:
             # Check the sonar reading
             self.distance = self.rr.get_distance()
 
-            self.moveTime += 1
+            # Are we moving? Should we stop?
+            if self.goingReverse or self.goingForward or self.turningRight or self.turningLeft:
+                self.moveTime += 1
 
-            # If we've been going in a certain direction for too long, stop ourselves.
-            if self.moveTime >= self.stopTime:
-                print "Move completed."
-                self.stop()
-            else:
-                print self.moveTime + " / " + self.stopTime
+                # If we've been going in a certain direction for too long, stop ourselves.
+                if self.moveTime >= self.stopTime:
+                    print "Move completed."
+                    self.stop()
+                else:
+                    print str(self.moveTime) + " / " + str(self.stopTime)
+
 
             # Check for side collisions first
             self.leftCollision = self.rr.sw1_closed()
@@ -78,12 +81,14 @@ class RaspiRobot(threading.Thread):
     def forward(self,time=200):
         self.stop()
         try:
-            self.rr.set_motors(1,0,1,0)
+            print "Revving up..."
+            self.rr.set_motors(config.__MAX_SPEED__,0,config.__MAX_SPEED__,0)
             self.goingForward = True
             self.stopTime = time
-            print "Moving forward for " + time + " ticks."
-        except Exception:
+            print "Moving forward for " + str(time) + " ticks."
+        except Exception, e:
             print "Can't move forward! D:"
+            print e
             self.stop()
 
 
@@ -91,10 +96,10 @@ class RaspiRobot(threading.Thread):
     def reverse(self,time=200):
         self.stop()
         try:
-            self.rr.set_motors(1,1,1,1)
+            self.rr.set_motors(config.__MAX_SPEED__,1,config.__MAX_SPEED__,1)
             self.goingReverse = True
             self.stopTime = time
-            print "Backing up for " + time + " ticks."
+            print "Backing up for " + str(time) + " ticks."
         except Exception:
             print "Can't back up!"
             self.stop()
@@ -109,9 +114,8 @@ class RaspiRobot(threading.Thread):
         self.moveTime = 0
         self.stopTime = 0
         try:
-            print "Stopping"
             self.rr.stop()
-            return
+            print "Stopped."
         except Exception:
             print "WARNING: Couldn't stop robot!"
             for i in range(0,100):

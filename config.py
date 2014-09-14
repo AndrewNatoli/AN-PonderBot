@@ -1,3 +1,5 @@
 __author__ = 'andrew'
 
 __OUTPUT_DIR__ = "output/" #End with trailing slash!
+
+__MAX_SPEED__ = 0.5
