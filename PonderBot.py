@@ -1,6 +1,7 @@
 import database
 from camera import *
 from raspirobot import *
+from time import sleep
 
 __author__ = 'andrew'
 
@@ -8,9 +9,8 @@ print "Hello World!"
 
 database.db.test.find()
 
-#Take a test photo
+#Initialize the camera
 camera = Camera()
-camera.filename = "test2.jpg"
 camera.start()
 
 #Initialize and run the RaspiRobot thread
@@ -21,9 +21,9 @@ else:
     print "Can't use Raspi Robot Board. Quitting."
     exit()
 
-from time import sleep
+#Capture a test photo
+camera.capture("test.jpg")
+
 sleep(1)
 raspirobot.kill()
-
-if bacon == True:
-    print "YES"
+camera.kill()
