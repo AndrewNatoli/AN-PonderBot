@@ -1,5 +1,5 @@
 import database
-import camera
+from camera import *
 from raspirobot import *
 
 __author__ = 'andrew'
@@ -8,8 +8,10 @@ print "Hello World!"
 
 database.db.test.find()
 
-camera = camera.Camera()
-camera.testCapture()
+#Take a test photo
+camera = Camera()
+camera.filename = "test2.jpg"
+camera.start()
 
 #Initialize and run the RaspiRobot thread
 raspirobot = RaspiRobot()
