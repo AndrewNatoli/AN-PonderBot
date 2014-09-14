@@ -59,7 +59,6 @@ class RaspiRobot(threading.Thread):
             self.rightCollision = self.rr.sw2_closed()
 
             if self.leftCollision or self.rightCollision:
-                print "Hit something."
                 # Did we move forward into something?
                 if self.goingForward:
                     print "Crashed into something while moving forward."
