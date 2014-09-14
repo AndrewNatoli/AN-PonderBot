@@ -54,6 +54,17 @@ class RaspiRobot(threading.Thread):
             # Check the sonar reading
             self.distance = self.rr.get_distance()
 
+            # Check for side collisions first
+            self.leftCollision = self.rr.sw1_closed()
+            self.rightCollision = self.rr.sw2_closed()
+
+            if self.leftCollision or self.rightCollision:
+                print "Hit something."
+                # Did we move forward into something?
+                if self.goingForward:
+                    print "Crashed into something while moving forward."
+                    self.reverse(200)
+
             # Are we moving? Should we stop?
             if self.goingReverse or self.goingForward or self.turningRight or self.turningLeft:
                 self.moveTime += 1
@@ -61,19 +72,6 @@ class RaspiRobot(threading.Thread):
                 # If we've been going in a certain direction for too long, stop ourselves.
                 if self.moveTime >= self.stopTime:
                     print "Move completed."
-                    self.stop()
-                else:
-                    print str(self.moveTime) + " / " + str(self.stopTime)
-
-
-            # Check for side collisions first
-            self.leftCollision = self.rr.sw1_closed()
-            self.rightCollision = self.rr.sw2_closed()
-
-            if self.leftCollision or self.rightCollision:
-                # Did we move forward into something?
-                if self.goingForward:
-                    print "Crashed into something while moving forward. Stopping."
                     self.stop()
 
 
@@ -140,12 +138,11 @@ class RaspiRobot(threading.Thread):
 
 
     # The extra LED sitting in the first open collector output
+    def led3(self,boolean):
+        self.rr.set_led2(boolean)
 
-def led3(self,boolean):
-    self.rr.set_led2(boolean)
-
-def kill(self):
-        print "Killed Raspi Robot Thread."
-        self.okToRun = False
+    def kill(self):
+            print "Killed Raspi Robot Thread."
+            self.okToRun = False
 
 

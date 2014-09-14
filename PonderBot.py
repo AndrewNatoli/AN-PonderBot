@@ -6,6 +6,9 @@ from time import sleep
 
 __author__ = 'andrew'
 
+okToRun = True
+toDo = "test"
+
 print "Hello World!"
 
 database.db.test.find()
@@ -25,6 +28,16 @@ else:
 #Capture a test photo
 camera.capture("test.jpg")
 
-sleep(1)
+# Spin up an infinite loop or something
+while okToRun:
+    # Make sure everything is going alright...
+    if raspirobot.okToRun and camera.okToRun:
+        okToRun = True
+        sleep(1)
+    else:
+        okToRun = False
+
+# Shut down
 raspirobot.kill()
 camera.kill()
+os.system("sudo mongod --shutdown")

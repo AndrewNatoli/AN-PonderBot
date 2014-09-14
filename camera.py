@@ -11,9 +11,15 @@ class Camera(threading.Thread):
     okToRun = True
 
     def __init__(self):
-        self.cam = picamera.PiCamera()
-        print "Initialized PiCamera"
-        super(Camera, self).__init__()
+        try:
+            self.cam = picamera.PiCamera()
+            print "Initialized PiCamera"
+        except Exception, e:
+            print "Couldn't initialize camera."
+            print e
+            self.okToRun = False
+        finally:
+            super(Camera, self).__init__()
 
     def capture(self,filename):
         self.filename = filename
@@ -29,6 +35,12 @@ class Camera(threading.Thread):
                 except Exception:
                     self.queue = False
                     print "Could not take photo!"
+        self.cam.close()
+        print "Camera finished."
+
+    def kill(self):
+        print "Stopping camera."
+        self.okToRun = False
 
 
 
