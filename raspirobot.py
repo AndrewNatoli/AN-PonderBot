@@ -198,12 +198,12 @@ class RaspiRobot(threading.Thread):
                             if not self.leftCollision and not self.rightCollision:
                                 self.forward(400)
                             else:
+                                self.lastIncident = self.Incidents.crashedForward
                                 if self.leftCollision and not self.rightCollision:
                                     self.right(250)
                                 elif self.rightCollision and not self.leftCollision:
                                     self.left(250)
                                 else:
-                                    self.lastIncident = self.Incidents.crashedForward
                                     self.reverse(randint(250,450))
                         # Closer than 10cm...
                         else:
@@ -262,7 +262,7 @@ class RaspiRobot(threading.Thread):
                             # Side collision! D:
                             else:
                                 self.lastIncident = self.Incidents.crashedRight
-                                self.reverse(randint(200,400))
+                                self.reverse(randint(200, 400))
 
                         # Something is closer than 10cm away
                         else:
@@ -272,7 +272,19 @@ class RaspiRobot(threading.Thread):
                             # Side collision!
                             else:
                                 self.lastIncident = self.Incidents.crashedRight
-                                self.reverse(randint(200,400))
+                                self.reverse(randint(200, 400))
+
+                # These checks will happen WHILE we're moving
+                else:
+                    # Check the distance
+                    if self.distance <= 10:
+                        # Are we moving forward?
+                        if self.direction == self.Directions.forward:
+                            # This will force the robot to stop and carry out post-motion behavior.
+                            self.moveTime = self.stopTime
+
+
+
 
 
 
