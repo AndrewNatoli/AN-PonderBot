@@ -8,17 +8,35 @@ import threading
 import config
 from rrb2 import *
 from time import sleep
+from enum import Enum
 
 bacon = True
 
 class RaspiRobot(threading.Thread):
 
+    class Incidents(Enum):
+        nothing = -1
+        wentForward = 0
+        wentReverse = 1
+        turnedLeft = 2
+        turnedRight = 3
+        crashedForward = 4
+        crashedLeft = 5
+        crashedRight = 6
+
+    class Directions(Enum):
+        stopped = -1
+        forward = 0
+        reverse = 1
+        left = 2
+        right = 3
+
     okToRun = False             # Keeps the thread alive
 
-    turningLeft = False         # Turning left?
-    turningRight = False        # Turning right?
-    goingForward = False        # Going forward?
-    goingReverse = False        # Going in reverse?
+
+    direction = Directions.stopped
+
+    lastAction = Incidents.nothing
 
     moveTime = 0                # How many iterations have we been moving for?
     stopTime = 0                # Stop moving after this many iterations of the run loop
@@ -60,19 +78,24 @@ class RaspiRobot(threading.Thread):
 
             if self.leftCollision or self.rightCollision:
                 # Did we move forward into something?
-                if self.goingForward:
+                if self.self.direction == self.Directions.forward:
                     print "Crashed into something while moving forward."
+                    self.lastAction = self.Incidents.crashedForward
                     self.reverse(200)
 
             # Are we moving? Should we stop?
-            if self.goingReverse or self.goingForward or self.turningRight or self.turningLeft:
+            if self.direction != self.Directions.stopped:
                 self.moveTime += 1
 
                 # If we've been going in a certain direction for too long, stop ourselves.
                 if self.moveTime >= self.stopTime:
-                    print "Move completed."
+                    # First, we'll stop...
+                    howMoved = self.direction
                     self.stop()
 
+                    # How were we moving?
+
+                        # Why were we going backwards?
 
     # Start moving forward
     def forward(self,time=200):
@@ -80,7 +103,7 @@ class RaspiRobot(threading.Thread):
         try:
             print "Revving up..."
             self.rr.set_motors(config.__MAX_SPEED__,0,config.__MAX_SPEED__,0)
-            self.goingForward = True
+            self.direction = self.Directions.forward
             self.stopTime = time
             print "Moving forward for " + str(time) + " ticks."
         except Exception, e:
@@ -94,7 +117,7 @@ class RaspiRobot(threading.Thread):
         self.stop()
         try:
             self.rr.set_motors(config.__MAX_SPEED__,1,config.__MAX_SPEED__,1)
-            self.goingReverse = True
+            self.direction = self.Directions.reverse
             self.stopTime = time
             print "Backing up for " + str(time) + " ticks."
         except Exception:
@@ -104,10 +127,6 @@ class RaspiRobot(threading.Thread):
 
     # Stop the robot. If we can't, shut it down.
     def stop(self):
-        self.goingForward = False
-        self.goingReverse = False
-        self.turningLeft = False
-        self.turningRight = False
         self.moveTime = 0
         self.stopTime = 0
         try:
@@ -119,7 +138,7 @@ class RaspiRobot(threading.Thread):
                 try:
                     self.rr.stop()
                     print "OK: Regained control."
-                    return # We're clear.
+                    return  # We're clear.
                 except Exception:
                     pass
             # If we've lost control entirely then shut down the system.
