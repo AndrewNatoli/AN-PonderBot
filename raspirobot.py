@@ -105,7 +105,7 @@ class RaspiRobot(threading.Thread):
                 if self.moveTime >= self.stopTime:
                     # First, we'll stop...
                     howMoved = self.direction
-                    self.stop()
+                    print "We were moving " + str(self.direction)
 
                     # We were going backwards...
                     if howMoved == self.Directions.reverse:
@@ -134,6 +134,7 @@ class RaspiRobot(threading.Thread):
 
                     # We were moving forward...
                     if howMoved == self.Directions.forward:
+                        print "Hit this point"
                         # Something further than 10cm...
                         if self.distance > 10:
                             if not self.leftCollision and not self.rightCollision:
@@ -170,6 +171,50 @@ class RaspiRobot(threading.Thread):
                                 else:
                                     self.reverse(randint(200, 400))
 
+                    # We were turning left
+                    if howMoved == self.Directions.left:
+                        # Something's further than 10cm away
+                        if self.distance > 10:
+                            # Bumpers are clear...
+                            if not self.leftCollision and not self.rightCollision:
+                                self.forward(200)
+                            # Side collision! D:
+                            else:
+                                self.lastIncident = self.Incidents.crashedLeft
+                                self.reverse(randint(200,400))
+
+                        # Something's closer than 10cm away
+                        else:
+                            # Keep turning left
+                            if not self.leftCollision and not self.rightCollision:
+                                self.left(250)
+                            # Side collision!
+                            else:
+                                self.lastIncident = self.Incidents.crashedLeft
+                                self.reverse(randint(200,400))
+
+
+                    # We were turning right
+                    if howMoved == self.Directions.right:
+                        # Something is further than 10cm away
+                        if self.distance > 10:
+                            # Bumpers are clear...
+                            if not self.leftCollision and not self.rightCollision:
+                                self.forward(200)
+                            # Side collision! D:
+                            else:
+                                self.lastIncident = self.Incidents.crashedRight
+                                self.reverse(randint(200,400))
+
+                        # Something is closer than 10cm away
+                        else:
+                            # Keep turning right
+                            if not self.leftCollision and not self.rightCollision:
+                                self.right(250)
+                            # Side collision!
+                            else:
+                                self.lastIncident = self.Incidents.crashedRight
+                                self.reverse(randint(200,400))
 
 
 
@@ -188,7 +233,7 @@ class RaspiRobot(threading.Thread):
             self.stop()
 
 
-    # Start moving in reverse
+    # Start moving in    reverse
     def reverse(self,time=200):
         self.stop()
         try:
