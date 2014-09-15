@@ -277,11 +277,16 @@ class RaspiRobot(threading.Thread):
                 # These checks will happen WHILE we're moving
                 else:
                     # Check the distance
-                    if self.distance <= 10:
+                    if self.distance <= 20:
                         # Are we moving forward?
                         if self.direction == self.Directions.forward:
                             # This will force the robot to stop and carry out post-motion behavior.
                             self.moveTime = self.stopTime
+                    else:
+                        # If we're moving in reverse and there's a clear path ahead
+                        if self.direction == self.Directions.reverse:
+                            if not self.leftCollision and not self.rightCollision:
+                                self.moveTime = self.stopTime
 
 
 
