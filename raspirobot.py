@@ -242,11 +242,18 @@ class RaspiRobot(threading.Thread):
 
                     # We were moving forward...
                     if howMoved == self.Directions.forward:
-                        print "Hit this point"
                         # Something further than 10cm...
                         if self.distance > 10:
                             if not self.leftCollision and not self.rightCollision:
-                                self.forward(400)
+                                choose = randint(1, 9)
+                                if choose == 7:
+                                    self.left(randint(40, 150))
+                                elif choose == 8:
+                                    self.left(randint(40, 150))
+                                elif choose == 9:
+                                    self.reverse(randint(40,150))
+                                else:
+                                    self.forward(randint(200, 400))
                             else:
                                 self.lastIncident = self.Incidents.crashedForward
                                 if self.leftCollision and not self.rightCollision:
@@ -254,7 +261,7 @@ class RaspiRobot(threading.Thread):
                                 elif self.rightCollision and not self.leftCollision:
                                     self.left(250)
                                 else:
-                                    self.reverse(randint(250,450))
+                                    self.reverse(randint(250, 450))
                         # Closer than 10cm...
                         else:
                             # Bumpers are clear
