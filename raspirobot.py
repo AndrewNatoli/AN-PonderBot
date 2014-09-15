@@ -131,6 +131,34 @@ class RaspiRobot(threading.Thread):
                                     self.left(200)
                                 else:
                                     self.right(200)
+                        # Did we crash while turning?
+                        elif self.lastIncident == self.Incidents.crashedLeft or self.lastIncident == self.Incidents.crashedRight:
+                            if self.lastIncident == self.Incidents.crashedLeft:
+                                self.rr.right(0.5, config.__MAX_SPEED__) # Pauses the thread while this happens...
+                                self.lastIncident = self.Incidents.nothing # Reset the incident
+                                # Crashed right while turning right
+                                if self.rr.sw2_closed():
+                                    self.lastIncident = self.Incidents.crashedRight
+                                    self.reverse(randint(200,450))
+                                # No we didn't!
+                                else:
+                                    # There's an obstacle closer than 10cm
+                                    if self.rr.get_distance() < 10:
+                                        while self.rr.get_distance() < 10:
+                                            self.rr.right(0.5)
+                                            if self.rr.sw2_closed():
+                                                self.lastIncident = self.Incidents.crashedRight
+                                                self.reverse(randint(200,500))
+                                                break # Quit this little distance check loop
+                                        # If we didn't crash right while in that loop... move forward!
+                                        if self.lastIncident is not self.Incidents.crashedRight:
+                                            self.forward(randint(200,400))
+                                    # Obstacle further than 10cm
+                                    else:
+                                        self.lastIncident = self.Incidents.nothing
+                                        self.forward(randint(200,400))
+
+
 
                     # We were moving forward...
                     if howMoved == self.Directions.forward:
