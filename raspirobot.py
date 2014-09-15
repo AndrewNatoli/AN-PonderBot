@@ -105,7 +105,6 @@ class RaspiRobot(threading.Thread):
                 if self.moveTime >= self.stopTime:
                     # First, we'll stop...
                     howMoved = self.direction
-                    print "We were moving " + str(self.direction)
 
                     # We were going backwards...
                     if howMoved == self.Directions.reverse:
@@ -187,6 +186,57 @@ class RaspiRobot(threading.Thread):
                                         self.forward(randint(200, 400))
                             else:
                                 print "Not sure how we ended up here.... (side crash --> reverse --> motion expiry)"
+                        # We weren't backing up because of an incident. It was for the funsies! (or sonar or something)
+                        else:
+                            # If NOW we have a collision...
+                            if self.leftCollision or self.rightCollision:
+                                # Left Collision
+                                if self.leftCollision and not self.rightCollision:
+                                    # Try moving right
+                                    self.rr.right(0.5,config.__MAX_SPEED__)
+                                    # If there's still a collision
+                                    if self.leftCollision or self.rightCollision:
+                                        # Back up and report the incident
+                                        self.reverse(randint(200,400))
+                                        self.lastIncident = self.Incidents.crashedLeft
+                                    # No collision.
+                                    else:
+                                        # Reverse if close to something
+                                        if self.rr.get_distance() < 10:
+                                            self.reverse(randint(200,400))
+                                        # Forward if not
+                                        else:
+                                            self.forward(randint(200,400))
+                                # If we had a collision from the right... handle it just about the same way
+                                elif self.rightCollision and not self.leftCollision:
+                                    self.rr.left(0.5,config.__MAX_SPEED__)
+                                    if self.leftCollision or self.rightCollision:
+                                        self.reverse(randint(200,400))
+                                        self.lastIncident = self.Incidents.crashedRight
+                                    else:
+                                        if self.rr.get_distance() < 10:
+                                            self.reverse(randint(200,400))
+                                        else:
+                                            self.forward(randint(200,400))
+                            # No collision! Check distance and do things that way.
+                            else:
+                                if self.distance > 10:
+                                    choose = randint(1,4)
+                                    if choose == 1 or choose == 2:
+                                        self.forward(randint(200,400))
+                                    elif choose == 3:
+                                        self.left(randint(100,400))
+                                    else:
+                                        self.right(randint(100,400))
+                                else:
+                                    choose = randint(1,3)
+                                    if choose == 1:
+                                        self.reverse(randint(100,400))
+                                    elif choose == 2:
+                                        self.left(randint(100,300))
+                                    else:
+                                        self.right(randint(100,300))
+
 
 
 
