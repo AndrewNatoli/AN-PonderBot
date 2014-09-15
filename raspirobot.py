@@ -9,6 +9,7 @@ import config
 from rrb2 import *
 from time import sleep
 from enum import Enum
+from random import randint
 
 bacon = True
 
@@ -36,7 +37,7 @@ class RaspiRobot(threading.Thread):
 
     direction = Directions.stopped
 
-    lastAction = Incidents.nothing
+    lastIncident = Incidents.nothing
 
     moveTime = 0                # How many iterations have we been moving for?
     stopTime = 0                # Stop moving after this many iterations of the run loop
@@ -64,7 +65,6 @@ class RaspiRobot(threading.Thread):
             self.okToRun = False
             print "Failed to initialize RaspiRobot Board"
 
-
     # Run the robot!
     def run(self):
         print "Running Raspi Robot"
@@ -78,10 +78,24 @@ class RaspiRobot(threading.Thread):
 
             if self.leftCollision or self.rightCollision:
                 # Did we move forward into something?
-                if self.self.direction == self.Directions.forward:
+                if self.direction == self.Directions.forward:
                     print "Crashed into something while moving forward."
-                    self.lastAction = self.Incidents.crashedForward
+                    self.lastIncident = self.Incidents.crashedForward
                     self.reverse(200)
+                """ Going in reverse is handled by the timer """
+                # Stopped?
+                if self.direction == self.Directions.stopped:
+                    # Which switch did it?
+                    if self.leftCollision and not self.rightCollision:
+                        # Try turning right...
+                        self.right(200)
+                    elif self.rightCollision and not self.leftCollision:
+                        # Try turning left...
+                        self.left(200)
+                    else:
+                        # Keep backing up....
+                        self.reverse(200)
+
 
             # Are we moving? Should we stop?
             if self.direction != self.Directions.stopped:
@@ -93,9 +107,71 @@ class RaspiRobot(threading.Thread):
                     howMoved = self.direction
                     self.stop()
 
-                    # How were we moving?
+                    # We were going backwards...
+                    if howMoved == self.Directions.reverse:
+                        # Why were we going in reverse?
+                        if self.lastIncident == self.Incidents.crashedForward:
+                            # We crashed while moving forward...
+                            if self.leftCollision or self.rightCollision:
+                                # We're STILL crashed? Ugh! Get free somehow!
+                                if self.leftCollision and not self.rightCollision:
+                                    self.rr.right(0.5, config.__MAX_SPEED__)
+                                elif self.rightCollision and not self.leftCollision:
+                                    self.rr.left(0.5, config.__MAX_SPEED__)
+                                else: # Both are pressed... try to wiggle free.
+                                    self.rr.right(0.5, config.__MAX_SPEED__)
+                                    self.rr.left(0.5, config.__MAX_SPEED__)
+                                    self.reverse(250)
+                            else:
+                                # We're free!
+                                self.lastIncident = self.Incidents.nothing
+                                # Turn randomly...
+                                choose = randint(1,2)
+                                if choose == 1:
+                                    self.left(200)
+                                else:
+                                    self.right(200)
 
-                        # Why were we going backwards?
+                    # We were moving forward...
+                    if howMoved == self.Directions.forward:
+                        # Something further than 10cm...
+                        if self.distance > 10:
+                            if not self.leftCollision and not self.rightCollision:
+                                self.forward(400)
+                            else:
+                                if self.leftCollision and not self.rightCollision:
+                                    self.right(250)
+                                elif self.rightCollision and not self.leftCollision:
+                                    self.left(250)
+                                else:
+                                    self.lastIncident = self.Incidents.crashedForward
+                                    self.reverse(randint(250,450))
+                        # Closer than 10cm...
+                        else:
+                            # Bumpers are clear
+                            if not self.leftCollision and not self.rightCollision:
+                                choose = randint(1,3)
+                                if choose == 1:
+                                    self.left(250)
+                                elif choose == 2:
+                                    self.right(250)
+                                else:
+                                    self.reverse()
+                            # Closer than 10cm and side collision
+                            else:
+                                self.lastIncident = self.Incidents.crashedForward
+                                # Crashed left
+                                if self.leftCollision and not self.rightCollision:
+                                    self.right(randint(200, 300))
+                                # Crashed Right
+                                elif self.rightCollision and not self.leftCollision:
+                                    self.left(randint(200, 300))
+                                # Hit both sensors...
+                                else:
+                                    self.reverse(randint(200, 400))
+
+
+
 
     # Start moving forward
     def forward(self,time=200):
@@ -107,7 +183,7 @@ class RaspiRobot(threading.Thread):
             self.stopTime = time
             print "Moving forward for " + str(time) + " ticks."
         except Exception, e:
-            print "Can't move forward! D:"
+            print "Can't move forward!"
             print e
             self.stop()
 
@@ -120,10 +196,36 @@ class RaspiRobot(threading.Thread):
             self.direction = self.Directions.reverse
             self.stopTime = time
             print "Backing up for " + str(time) + " ticks."
-        except Exception:
+        except Exception, e:
             print "Can't back up!"
+            print e
             self.stop()
 
+    # Turn left
+    def left(self,time=200):
+        self.stop()
+        try:
+            self.rr.set_motors(config.__MAX_SPEED__,1,config.__MAX_SPEED__,0)
+            self.direction = self.Directions.left
+            self.stopTime = time
+            print "Turning left for " + str(time) + " ticks."
+        except Exception, e:
+            print "Can't turn left!"
+            print e
+            self.stop()
+
+    # Turn right
+    def right(self,time=200):
+        self.stop()
+        try:
+            self.rr.set_motors(config.__MAX_SPEED__,0,config.__MAX_SPEED__,1)
+            self.direction = self.Directions.right
+            self.stopTime = time
+            print "Turning right for " + str(time) + " ticks."
+        except Exception, e:
+            print "Can't turn right!"
+            print e
+            self.stop()
 
     # Stop the robot. If we can't, shut it down.
     def stop(self):
