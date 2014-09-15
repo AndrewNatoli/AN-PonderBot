@@ -332,11 +332,23 @@ class RaspiRobot(threading.Thread):
                         if self.direction == self.Directions.forward:
                             # This will force the robot to stop and carry out post-motion behavior.
                             self.moveTime = self.stopTime
-                    else:
+                    elif self.distance > 20:
                         # If we're moving in reverse and there's a clear path ahead
                         if self.direction == self.Directions.reverse:
                             if not self.leftCollision and not self.rightCollision:
                                 self.moveTime = self.stopTime
+                    elif self.leftCollision or self.rightCollision:
+                        if self.leftCollision and not self.rightCollision:
+                            self.right(randint(100,300))
+                            self.lastIncident = self.Incidents.crashedLeft
+                        elif self.rightCollision and not self.leftCollision:
+                            self.left(randint(100,300))
+                            self.lastIncident = self.Incidents.crashedRight
+                        elif self.rightCollision and self.leftCollision:
+                            self.reverse(randint(100,300))
+                            self.lastIncident = self.Incidents.crashedForward
+                        else:
+                            print "Not sure how we ended up here (gibberish code sdf2hewdfsu9)"
 
 
 
