@@ -133,6 +133,8 @@ class RaspiRobot(threading.Thread):
                                     self.right(200)
                         # Did we crash while turning?
                         elif self.lastIncident == self.Incidents.crashedLeft or self.lastIncident == self.Incidents.crashedRight:
+
+                            # We had crashed while turning left before backing up!
                             if self.lastIncident == self.Incidents.crashedLeft:
                                 self.rr.right(0.5, config.__MAX_SPEED__) # Pauses the thread while this happens...
                                 self.lastIncident = self.Incidents.nothing # Reset the incident
@@ -149,14 +151,42 @@ class RaspiRobot(threading.Thread):
                                             if self.rr.sw2_closed():
                                                 self.lastIncident = self.Incidents.crashedRight
                                                 self.reverse(randint(200,500))
-                                                break # Quit this little distance check loop
+                                                break  # Quit this little distance check loop
                                         # If we didn't crash right while in that loop... move forward!
                                         if self.lastIncident is not self.Incidents.crashedRight:
-                                            self.forward(randint(200,400))
+                                            self.forward(randint(200, 400))
                                     # Obstacle further than 10cm
                                     else:
                                         self.lastIncident = self.Incidents.nothing
-                                        self.forward(randint(200,400))
+                                        self.forward(randint(200, 400))
+
+                            # We crashed while turning to the right somehow!
+                            elif self.lastIncident == self.Incidents.crashedRight:
+                                self.rr.left(0.5, config.__MAX_SPEED__) # Pauses the thread while this happens...
+                                self.lastIncident = self.Incidents.nothing # Reset the incident
+                                # Crashed right while turning right
+                                if self.rr.sw1_closed():
+                                    self.lastIncident = self.Incidents.crashedLeft
+                                    self.reverse(randint(200,450))
+                                # No we didn't!
+                                else:
+                                    # There's an obstacle closer than 10cm
+                                    if self.rr.get_distance() < 10:
+                                        while self.rr.get_distance() < 10:
+                                            self.rr.left(0.5)
+                                            if self.rr.sw1_closed():
+                                                self.lastIncident = self.Incidents.crashedLeft
+                                                self.reverse(randint(200, 500))
+                                                break  # Quit this little distance check loop
+                                        # If we didn't crash right while in that loop... move forward!
+                                        if self.lastIncident is not self.Incidents.crashedLeft:
+                                            self.forward(randint(200, 400))
+                                    # Obstacle further than 10cm
+                                    else:
+                                        self.lastIncident = self.Incidents.nothing
+                                        self.forward(randint(200, 400))
+                            else:
+                                print "Not sure how we ended up here.... (side crash --> reverse --> motion expiry)"
 
 
 
