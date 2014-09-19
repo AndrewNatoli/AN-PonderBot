@@ -438,17 +438,17 @@ class RaspiRobot(threading.Thread):
 
     # First LED on the board
     def led1(self,boolean):
-        self.rr.set_oc1(boolean)
+        self.rr.set_led1(boolean)
 
 
     # Second LED on the board
     def led2(self,boolean):
-        self.rr.set_led1(boolean)
+        self.rr.set_led2(boolean)
 
 
     # The extra LED sitting in the first open collector output
     def led3(self,boolean):
-        self.rr.set_led2(boolean)
+        self.rr.set_oc1(boolean)
 
     def kill(self):
             print "Killed Raspi Robot Thread."
