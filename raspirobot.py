@@ -35,6 +35,9 @@ class RaspiRobot(threading.Thread):
     okToRun = False             # Keeps the thread alive
 
 
+    timeSinceDistanceScan = 0 # The amount of ticks since we last checked the sonar reading
+
+
     direction = Directions.stopped
 
     lastIncident = Incidents.nothing
@@ -49,7 +52,7 @@ class RaspiRobot(threading.Thread):
 
     def __init__(self):
         super(RaspiRobot, self).__init__()
-        print "Created Raspi Robot"
+        print "Created Raspi Robot. MWAH HAWH HAWH!"
         try:
             self.rr = RRB2()
             self.led1(True)
@@ -69,8 +72,9 @@ class RaspiRobot(threading.Thread):
     def run(self):
         print "Running Raspi Robot"
         while self.okToRun:
-            # Check the sonar reading
-            self.distance = self.rr.get_distance()
+            # Check the sonar reading every fifty iterations
+            if self.timeSinceDistanceScan >= 50:
+                self.distance = self.rr.get_distance()
 
             # Check for side collisions first
             self.leftCollision = self.rr.sw1_closed()
