@@ -75,6 +75,10 @@ class RaspiRobot(threading.Thread):
             # Check the sonar reading every fifty iterations
             if self.timeSinceDistanceScan >= 50:
                 self.distance = self.rr.get_distance()
+                self.timeSinceDistanceScan = 0
+
+            # Increment the timeSinceDistanceScan
+            self.timeSinceDistanceScan += 1
 
             # Check for side collisions first
             self.leftCollision = self.rr.sw1_closed()
