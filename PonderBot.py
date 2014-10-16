@@ -1,4 +1,4 @@
-import database
+# import database
 import os
 from cli import *
 from camera import *
@@ -29,7 +29,7 @@ print "======================================================="
 
 
 #Database is initialized when we import the database module so this will work ;)
-database.db.test.find()
+# database.db.test.find()
 
 #Command line interface
 cli = CLI()
