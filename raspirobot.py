@@ -104,13 +104,15 @@ class RaspiRobot(threading.Thread):
                         # Keep backing up....
                         self.reverse(200)
 
-
             # Are we moving? Should we stop?
             if self.direction != self.Directions.stopped:
                 self.moveTime += 1
 
                 # If we've been going in a certain direction for too long, stop ourselves.
                 if self.moveTime >= self.stopTime:
+                    # Reset our move counter... JUST IN CASE. 2014-10-15 Attempt to fix infinite reverse bug.
+                    self.moveTime = 0;
+
                     # First, we'll stop...
                     howMoved = self.direction
 
@@ -385,7 +387,7 @@ class RaspiRobot(threading.Thread):
             self.stop()
 
 
-    # Start moving in    reverse
+    # Start moving in reverse
     def reverse(self,time=200):
         self.stop()
         try:

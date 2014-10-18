@@ -40,7 +40,7 @@ class Camera(threading.Thread):
 
     def kill(self):
         print "Stopping camera."
-        self.okToRun = False
+        self.okToRun = False # This will call cam.close(), fool! :P
 
 
 
