@@ -13,6 +13,7 @@ class Camera(threading.Thread):
     def __init__(self):
         try:
             self.cam = picamera.PiCamera()
+            self.cam.vflip = True
             print "Initialized PiCamera"
         except Exception, e:
             print "Couldn't initialize camera."
