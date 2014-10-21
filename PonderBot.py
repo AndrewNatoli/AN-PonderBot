@@ -14,6 +14,10 @@ def do_task(task):
     print "Got a task: " + str(task)
     if task[0] == "capture":
         camera.capture(task[1])
+    if task[0] == "start":
+        raspirobot.startMoving()
+    if task[0] == "stop":
+        raspirobot.stopMoving()
 
 
 """ Run the program! """

@@ -29,6 +29,16 @@ class CLI(threading.Thread):
                             self.stack.append(words)
                         else:
                             print "Missing second argument: filename."
+
+                   # Start the robot
+                    elif words[0] == "go" or words[0] == "start":
+                        words[0] = "start"
+                        self.stack.append(words)
+
+                    # Stop the Robot
+                    elif words[0] == "stop":
+                        self.stack.append(words)
+
                     else:
                         print "Unknown command, " + str(words[0])
 

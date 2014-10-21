@@ -50,6 +50,9 @@ class RaspiRobot(threading.Thread):
 
     distance = 9001             # Distance reading from the sonar
 
+    active = False              # Whether or not we SHOULD move.
+
+
     def __init__(self):
         super(RaspiRobot, self).__init__()
         print "Created Raspi Robot. MWAH HAWH HAWH!"
@@ -72,302 +75,315 @@ class RaspiRobot(threading.Thread):
     def run(self):
         print "Running Raspi Robot"
         while self.okToRun:
-            # Check the sonar reading every fifty iterations
-            if self.timeSinceDistanceScan >= 50:
-                self.distance = self.rr.get_distance()
-                self.timeSinceDistanceScan = 0
+            if self.active:
+                self.doMotion()
+            else:
+                sleep(1)
 
-            # Increment the timeSinceDistanceScan
-            self.timeSinceDistanceScan += 1
+    # Use CLI command "start" to start the robot
+    def startMoving(self):
+        self.active = True
 
-            # Check for side collisions first
-            self.leftCollision = self.rr.sw1_closed()
-            self.rightCollision = self.rr.sw2_closed()
+    # Make the robot stop moving
+    def stopMoving(self):
+        self.active = False
 
-            if self.leftCollision or self.rightCollision:
-                # Did we move forward into something?
-                if self.direction == self.Directions.forward:
-                    print "Crashed into something while moving forward."
-                    self.lastIncident = self.Incidents.crashedForward
+    def doMotion(self):
+        # Check the sonar reading every fifty iterations
+        if self.timeSinceDistanceScan >= 50:
+            self.distance = self.rr.get_distance()
+            self.timeSinceDistanceScan = 0
+
+        # Increment the timeSinceDistanceScan
+        self.timeSinceDistanceScan += 1
+
+        # Check for side collisions first
+        self.leftCollision = self.rr.sw1_closed()
+        self.rightCollision = self.rr.sw2_closed()
+
+        if self.leftCollision or self.rightCollision:
+            # Did we move forward into something?
+            if self.direction == self.Directions.forward:
+                print "Crashed into something while moving forward."
+                self.lastIncident = self.Incidents.crashedForward
+                self.reverse(200)
+            """ Going in reverse is handled by the timer """
+            # Stopped?
+            if self.direction == self.Directions.stopped:
+                # Which switch did it?
+                if self.leftCollision and not self.rightCollision:
+                    # Try turning right...
+                    self.right(200)
+                elif self.rightCollision and not self.leftCollision:
+                    # Try turning left...
+                    self.left(200)
+                else:
+                    # Keep backing up....
                     self.reverse(200)
-                """ Going in reverse is handled by the timer """
-                # Stopped?
-                if self.direction == self.Directions.stopped:
-                    # Which switch did it?
-                    if self.leftCollision and not self.rightCollision:
-                        # Try turning right...
-                        self.right(200)
-                    elif self.rightCollision and not self.leftCollision:
-                        # Try turning left...
-                        self.left(200)
-                    else:
-                        # Keep backing up....
-                        self.reverse(200)
 
-            # Are we moving? Should we stop?
-            if self.direction != self.Directions.stopped:
-                self.moveTime += 1
+        # Are we moving? Should we stop?
+        if self.direction != self.Directions.stopped:
+            self.moveTime += 1
 
-                # If we've been going in a certain direction for too long, stop ourselves.
-                if self.moveTime >= self.stopTime:
-                    # Reset our move counter... JUST IN CASE. 2014-10-15 Attempt to fix infinite reverse bug.
-                    self.moveTime = 0;
+            # If we've been going in a certain direction for too long, stop ourselves.
+            if self.moveTime >= self.stopTime:
+                # Reset our move counter... JUST IN CASE. 2014-10-15 Attempt to fix infinite reverse bug.
+                self.moveTime = 0;
 
-                    # First, we'll stop...
-                    howMoved = self.direction
+                # First, we'll stop...
+                howMoved = self.direction
 
-                    # We were going backwards...
-                    if howMoved == self.Directions.reverse:
-                        # Why were we going in reverse?
-                        if self.lastIncident == self.Incidents.crashedForward:
-                            # We crashed while moving forward...
-                            if self.leftCollision or self.rightCollision:
-                                # We're STILL crashed? Ugh! Get free somehow!
-                                if self.leftCollision and not self.rightCollision:
-                                    self.rr.right(0.5, config.__MAX_SPEED__)
-                                elif self.rightCollision and not self.leftCollision:
-                                    self.rr.left(0.5, config.__MAX_SPEED__)
-                                else: # Both are pressed... try to wiggle free.
-                                    self.rr.right(0.5, config.__MAX_SPEED__)
-                                    self.rr.left(0.5, config.__MAX_SPEED__)
-                                    self.reverse(250)
-                            else:
-                                # We're free!
-                                self.lastIncident = self.Incidents.nothing
-                                # Turn randomly...
-                                choose = randint(1,2)
-                                if choose == 1:
-                                    self.left(200)
-                                else:
-                                    self.right(200)
-                        # Did we crash while turning?
-                        elif self.lastIncident == self.Incidents.crashedLeft or self.lastIncident == self.Incidents.crashedRight:
-
-                            # We had crashed while turning left before backing up!
-                            if self.lastIncident == self.Incidents.crashedLeft:
-                                self.rr.right(0.5, config.__MAX_SPEED__) # Pauses the thread while this happens...
-                                self.lastIncident = self.Incidents.nothing # Reset the incident
-                                # Crashed right while turning right
-                                if self.rr.sw2_closed():
-                                    self.lastIncident = self.Incidents.crashedRight
-                                    self.reverse(randint(200,450))
-                                # No we didn't!
-                                else:
-                                    # There's an obstacle closer than 10cm
-                                    if self.rr.get_distance() < 10:
-                                        while self.rr.get_distance() < 10:
-                                            self.rr.right(0.5)
-                                            if self.rr.sw2_closed():
-                                                self.lastIncident = self.Incidents.crashedRight
-                                                self.reverse(randint(200,500))
-                                                break  # Quit this little distance check loop
-                                        # If we didn't crash right while in that loop... move forward!
-                                        if self.lastIncident is not self.Incidents.crashedRight:
-                                            self.forward(randint(200, 400))
-                                    # Obstacle further than 10cm
-                                    else:
-                                        self.lastIncident = self.Incidents.nothing
-                                        self.forward(randint(200, 400))
-
-                            # We crashed while turning to the right somehow!
-                            elif self.lastIncident == self.Incidents.crashedRight:
-                                self.rr.left(0.5, config.__MAX_SPEED__) # Pauses the thread while this happens...
-                                self.lastIncident = self.Incidents.nothing # Reset the incident
-                                # Crashed right while turning right
-                                if self.rr.sw1_closed():
-                                    self.lastIncident = self.Incidents.crashedLeft
-                                    self.reverse(randint(200,450))
-                                # No we didn't!
-                                else:
-                                    # There's an obstacle closer than 10cm
-                                    if self.rr.get_distance() < 10:
-                                        while self.rr.get_distance() < 10:
-                                            self.rr.left(0.5)
-                                            if self.rr.sw1_closed():
-                                                self.lastIncident = self.Incidents.crashedLeft
-                                                self.reverse(randint(200, 500))
-                                                break  # Quit this little distance check loop
-                                        # If we didn't crash right while in that loop... move forward!
-                                        if self.lastIncident is not self.Incidents.crashedLeft:
-                                            self.forward(randint(200, 400))
-                                    # Obstacle further than 10cm
-                                    else:
-                                        self.lastIncident = self.Incidents.nothing
-                                        self.forward(randint(200, 400))
-                            else:
-                                print "Not sure how we ended up here.... (side crash --> reverse --> motion expiry)"
-                        # We weren't backing up because of an incident. It was for the funsies! (or sonar or something)
+                # We were going backwards...
+                if howMoved == self.Directions.reverse:
+                    # Why were we going in reverse?
+                    if self.lastIncident == self.Incidents.crashedForward:
+                        # We crashed while moving forward...
+                        if self.leftCollision or self.rightCollision:
+                            # We're STILL crashed? Ugh! Get free somehow!
+                            if self.leftCollision and not self.rightCollision:
+                                self.rr.right(0.5, config.__MAX_SPEED__)
+                            elif self.rightCollision and not self.leftCollision:
+                                self.rr.left(0.5, config.__MAX_SPEED__)
+                            else: # Both are pressed... try to wiggle free.
+                                self.rr.right(0.5, config.__MAX_SPEED__)
+                                self.rr.left(0.5, config.__MAX_SPEED__)
+                                self.reverse(250)
                         else:
-                            # If NOW we have a collision...
-                            if self.leftCollision or self.rightCollision:
-                                # Left Collision
-                                if self.leftCollision and not self.rightCollision:
-                                    # Try moving right
-                                    self.rr.right(0.5,config.__MAX_SPEED__)
-                                    # If there's still a collision
-                                    if self.leftCollision or self.rightCollision:
-                                        # Back up and report the incident
-                                        self.reverse(randint(200,400))
-                                        self.lastIncident = self.Incidents.crashedLeft
-                                    # No collision.
-                                    else:
-                                        # Reverse if close to something
-                                        if self.rr.get_distance() < 10:
-                                            self.reverse(randint(200,400))
-                                        # Forward if not
-                                        else:
-                                            self.forward(randint(200,400))
-                                # If we had a collision from the right... handle it just about the same way
-                                elif self.rightCollision and not self.leftCollision:
-                                    self.rr.left(0.5,config.__MAX_SPEED__)
-                                    if self.leftCollision or self.rightCollision:
-                                        self.reverse(randint(200,400))
-                                        self.lastIncident = self.Incidents.crashedRight
-                                    else:
-                                        if self.rr.get_distance() < 10:
-                                            self.reverse(randint(200,400))
-                                        else:
-                                            self.forward(randint(200,400))
-                            # No collision! Check distance and do things that way.
+                            # We're free!
+                            self.lastIncident = self.Incidents.nothing
+                            # Turn randomly...
+                            choose = randint(1,2)
+                            if choose == 1:
+                                self.left(200)
                             else:
-                                if self.distance > 10:
-                                    choose = randint(1,4)
-                                    if choose == 1 or choose == 2:
-                                        self.forward(randint(200,400))
-                                    elif choose == 3:
-                                        self.left(randint(100,400))
-                                    else:
-                                        self.right(randint(100,400))
+                                self.right(200)
+                    # Did we crash while turning?
+                    elif self.lastIncident == self.Incidents.crashedLeft or self.lastIncident == self.Incidents.crashedRight:
+
+                        # We had crashed while turning left before backing up!
+                        if self.lastIncident == self.Incidents.crashedLeft:
+                            self.rr.right(0.5, config.__MAX_SPEED__) # Pauses the thread while this happens...
+                            self.lastIncident = self.Incidents.nothing # Reset the incident
+                            # Crashed right while turning right
+                            if self.rr.sw2_closed():
+                                self.lastIncident = self.Incidents.crashedRight
+                                self.reverse(randint(200,450))
+                            # No we didn't!
+                            else:
+                                # There's an obstacle closer than 10cm
+                                if self.rr.get_distance() < 10:
+                                    while self.rr.get_distance() < 10:
+                                        self.rr.right(0.5)
+                                        if self.rr.sw2_closed():
+                                            self.lastIncident = self.Incidents.crashedRight
+                                            self.reverse(randint(200,500))
+                                            break  # Quit this little distance check loop
+                                    # If we didn't crash right while in that loop... move forward!
+                                    if self.lastIncident is not self.Incidents.crashedRight:
+                                        self.forward(randint(200, 400))
+                                # Obstacle further than 10cm
                                 else:
-                                    choose = randint(1,3)
-                                    if choose == 1:
-                                        self.reverse(randint(100,400))
-                                    elif choose == 2:
-                                        self.left(randint(100,300))
-                                    else:
-                                        self.right(randint(100,300))
-
-
-
-
-                    # We were moving forward...
-                    if howMoved == self.Directions.forward:
-                        # Something further than 10cm...
-                        if self.distance > 10:
-                            if not self.leftCollision and not self.rightCollision:
-                                choose = randint(1, 9)
-                                if choose == 7:
-                                    self.left(randint(40, 150))
-                                elif choose == 8:
-                                    self.left(randint(40, 150))
-                                elif choose == 9:
-                                    self.reverse(randint(40,150))
-                                else:
+                                    self.lastIncident = self.Incidents.nothing
                                     self.forward(randint(200, 400))
+
+                        # We crashed while turning to the right somehow!
+                        elif self.lastIncident == self.Incidents.crashedRight:
+                            self.rr.left(0.5, config.__MAX_SPEED__) # Pauses the thread while this happens...
+                            self.lastIncident = self.Incidents.nothing # Reset the incident
+                            # Crashed right while turning right
+                            if self.rr.sw1_closed():
+                                self.lastIncident = self.Incidents.crashedLeft
+                                self.reverse(randint(200,450))
+                            # No we didn't!
                             else:
-                                self.lastIncident = self.Incidents.crashedForward
-                                if self.leftCollision and not self.rightCollision:
-                                    self.right(250)
-                                elif self.rightCollision and not self.leftCollision:
-                                    self.left(250)
+                                # There's an obstacle closer than 10cm
+                                if self.rr.get_distance() < 10:
+                                    while self.rr.get_distance() < 10:
+                                        self.rr.left(0.5)
+                                        if self.rr.sw1_closed():
+                                            self.lastIncident = self.Incidents.crashedLeft
+                                            self.reverse(randint(200, 500))
+                                            break  # Quit this little distance check loop
+                                    # If we didn't crash right while in that loop... move forward!
+                                    if self.lastIncident is not self.Incidents.crashedLeft:
+                                        self.forward(randint(200, 400))
+                                # Obstacle further than 10cm
                                 else:
-                                    self.reverse(randint(250, 450))
-                        # Closer than 10cm...
+                                    self.lastIncident = self.Incidents.nothing
+                                    self.forward(randint(200, 400))
                         else:
-                            # Bumpers are clear
-                            if not self.leftCollision and not self.rightCollision:
+                            print "Not sure how we ended up here.... (side crash --> reverse --> motion expiry)"
+                    # We weren't backing up because of an incident. It was for the funsies! (or sonar or something)
+                    else:
+                        # If NOW we have a collision...
+                        if self.leftCollision or self.rightCollision:
+                            # Left Collision
+                            if self.leftCollision and not self.rightCollision:
+                                # Try moving right
+                                self.rr.right(0.5,config.__MAX_SPEED__)
+                                # If there's still a collision
+                                if self.leftCollision or self.rightCollision:
+                                    # Back up and report the incident
+                                    self.reverse(randint(200,400))
+                                    self.lastIncident = self.Incidents.crashedLeft
+                                # No collision.
+                                else:
+                                    # Reverse if close to something
+                                    if self.rr.get_distance() < 10:
+                                        self.reverse(randint(200,400))
+                                    # Forward if not
+                                    else:
+                                        self.forward(randint(200,400))
+                            # If we had a collision from the right... handle it just about the same way
+                            elif self.rightCollision and not self.leftCollision:
+                                self.rr.left(0.5,config.__MAX_SPEED__)
+                                if self.leftCollision or self.rightCollision:
+                                    self.reverse(randint(200,400))
+                                    self.lastIncident = self.Incidents.crashedRight
+                                else:
+                                    if self.rr.get_distance() < 10:
+                                        self.reverse(randint(200,400))
+                                    else:
+                                        self.forward(randint(200,400))
+                        # No collision! Check distance and do things that way.
+                        else:
+                            if self.distance > 10:
+                                choose = randint(1,4)
+                                if choose == 1 or choose == 2:
+                                    self.forward(randint(200,400))
+                                elif choose == 3:
+                                    self.left(randint(100,400))
+                                else:
+                                    self.right(randint(100,400))
+                            else:
                                 choose = randint(1,3)
                                 if choose == 1:
-                                    self.left(250)
+                                    self.reverse(randint(100,400))
                                 elif choose == 2:
-                                    self.right(250)
+                                    self.left(randint(100,300))
                                 else:
-                                    self.reverse()
-                            # Closer than 10cm and side collision
-                            else:
-                                self.lastIncident = self.Incidents.crashedForward
-                                # Crashed left
-                                if self.leftCollision and not self.rightCollision:
-                                    self.right(randint(200, 300))
-                                # Crashed Right
-                                elif self.rightCollision and not self.leftCollision:
-                                    self.left(randint(200, 300))
-                                # Hit both sensors...
-                                else:
-                                    self.reverse(randint(200, 400))
+                                    self.right(randint(100,300))
 
-                    # We were turning left
-                    if howMoved == self.Directions.left:
-                        # Something's further than 10cm away
-                        if self.distance > 10:
-                            # Bumpers are clear...
-                            if not self.leftCollision and not self.rightCollision:
-                                self.forward(200)
-                            # Side collision! D:
-                            else:
-                                self.lastIncident = self.Incidents.crashedLeft
-                                self.reverse(randint(200,400))
 
-                        # Something's closer than 10cm away
+
+
+                # We were moving forward...
+                if howMoved == self.Directions.forward:
+                    # Something further than 10cm...
+                    if self.distance > 10:
+                        if not self.leftCollision and not self.rightCollision:
+                            choose = randint(1, 9)
+                            if choose == 7:
+                                self.left(randint(40, 150))
+                            elif choose == 8:
+                                self.left(randint(40, 150))
+                            elif choose == 9:
+                                self.reverse(randint(40,150))
+                            else:
+                                self.forward(randint(200, 400))
                         else:
-                            # Keep turning left
-                            if not self.leftCollision and not self.rightCollision:
-                                self.left(250)
-                            # Side collision!
-                            else:
-                                self.lastIncident = self.Incidents.crashedLeft
-                                self.reverse(randint(200,400))
-
-
-                    # We were turning right
-                    if howMoved == self.Directions.right:
-                        # Something is further than 10cm away
-                        if self.distance > 10:
-                            # Bumpers are clear...
-                            if not self.leftCollision and not self.rightCollision:
-                                self.forward(200)
-                            # Side collision! D:
-                            else:
-                                self.lastIncident = self.Incidents.crashedRight
-                                self.reverse(randint(200, 400))
-
-                        # Something is closer than 10cm away
-                        else:
-                            # Keep turning right
-                            if not self.leftCollision and not self.rightCollision:
-                                self.right(250)
-                            # Side collision!
-                            else:
-                                self.lastIncident = self.Incidents.crashedRight
-                                self.reverse(randint(200, 400))
-
-                # These checks will happen WHILE we're moving
-                else:
-                    # Check the distance
-                    if self.distance <= 20:
-                        # Are we moving forward?
-                        if self.direction == self.Directions.forward:
-                            # This will force the robot to stop and carry out post-motion behavior.
-                            self.moveTime = self.stopTime
-                    elif self.distance > 20:
-                        # If we're moving in reverse and there's a clear path ahead
-                        if self.direction == self.Directions.reverse:
-                            if not self.leftCollision and not self.rightCollision:
-                                self.moveTime = self.stopTime
-                    elif self.leftCollision or self.rightCollision:
-                        if self.leftCollision and not self.rightCollision:
-                            self.right(randint(100,300))
-                            self.lastIncident = self.Incidents.crashedLeft
-                        elif self.rightCollision and not self.leftCollision:
-                            self.left(randint(100,300))
-                            self.lastIncident = self.Incidents.crashedRight
-                        elif self.rightCollision and self.leftCollision:
-                            self.reverse(randint(100,300))
                             self.lastIncident = self.Incidents.crashedForward
+                            if self.leftCollision and not self.rightCollision:
+                                self.right(250)
+                            elif self.rightCollision and not self.leftCollision:
+                                self.left(250)
+                            else:
+                                self.reverse(randint(250, 450))
+                    # Closer than 10cm...
+                    else:
+                        # Bumpers are clear
+                        if not self.leftCollision and not self.rightCollision:
+                            choose = randint(1,3)
+                            if choose == 1:
+                                self.left(250)
+                            elif choose == 2:
+                                self.right(250)
+                            else:
+                                self.reverse()
+                        # Closer than 10cm and side collision
                         else:
-                            print "Not sure how we ended up here (gibberish code sdf2hewdfsu9)"
+                            self.lastIncident = self.Incidents.crashedForward
+                            # Crashed left
+                            if self.leftCollision and not self.rightCollision:
+                                self.right(randint(200, 300))
+                            # Crashed Right
+                            elif self.rightCollision and not self.leftCollision:
+                                self.left(randint(200, 300))
+                            # Hit both sensors...
+                            else:
+                                self.reverse(randint(200, 400))
+
+                # We were turning left
+                if howMoved == self.Directions.left:
+                    # Something's further than 10cm away
+                    if self.distance > 10:
+                        # Bumpers are clear...
+                        if not self.leftCollision and not self.rightCollision:
+                            self.forward(200)
+                        # Side collision! D:
+                        else:
+                            self.lastIncident = self.Incidents.crashedLeft
+                            self.reverse(randint(200,400))
+
+                    # Something's closer than 10cm away
+                    else:
+                        # Keep turning left
+                        if not self.leftCollision and not self.rightCollision:
+                            self.left(250)
+                        # Side collision!
+                        else:
+                            self.lastIncident = self.Incidents.crashedLeft
+                            self.reverse(randint(200,400))
 
 
+                # We were turning right
+                if howMoved == self.Directions.right:
+                    # Something is further than 10cm away
+                    if self.distance > 10:
+                        # Bumpers are clear...
+                        if not self.leftCollision and not self.rightCollision:
+                            self.forward(200)
+                        # Side collision! D:
+                        else:
+                            self.lastIncident = self.Incidents.crashedRight
+                            self.reverse(randint(200, 400))
+
+                    # Something is closer than 10cm away
+                    else:
+                        # Keep turning right
+                        if not self.leftCollision and not self.rightCollision:
+                            self.right(250)
+                        # Side collision!
+                        else:
+                            self.lastIncident = self.Incidents.crashedRight
+                            self.reverse(randint(200, 400))
+
+            # These checks will happen WHILE we're moving
+            else:
+                # Check the distance
+                if self.distance <= 20:
+                    # Are we moving forward?
+                    if self.direction == self.Directions.forward:
+                        # This will force the robot to stop and carry out post-motion behavior.
+                        print "Something is in the way. Stop moving forward."
+                        self.moveTime = self.stopTime
+                elif self.distance > 20:
+                    # If we're moving in reverse and there's a clear path ahead
+                    if self.direction == self.Directions.reverse:
+                        if not self.leftCollision and not self.rightCollision:
+                            self.moveTime = self.stopTime
+                elif self.leftCollision or self.rightCollision:
+                    if self.leftCollision and not self.rightCollision:
+                        self.right(randint(100,300))
+                        self.lastIncident = self.Incidents.crashedLeft
+                    elif self.rightCollision and not self.leftCollision:
+                        self.left(randint(100,300))
+                        self.lastIncident = self.Incidents.crashedRight
+                    elif self.rightCollision and self.leftCollision:
+                        self.reverse(randint(100,300))
+                        self.lastIncident = self.Incidents.crashedForward
+                    else:
+                        print "Not sure how we ended up here (gibberish code sdf2hewdfsu9)"
 
 
 
