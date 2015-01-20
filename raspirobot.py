@@ -66,7 +66,7 @@ class RaspiRobot(threading.Thread):
             self.led2(False)
             self.okToRun = True
             print "Raspi Robot Initialized."
-            self.forward()
+            print "Start with \"start\" command!"
         except Exception:
             self.okToRun = False
             print "Failed to initialize RaspiRobot Board"
@@ -78,7 +78,8 @@ class RaspiRobot(threading.Thread):
             if self.active:
                 self.doMotion()
             else:
-                sleep(1)
+                print "Robot stopped. Sleep for three seconds."
+                sleep(3)
 
     # Use CLI command "start" to start the robot
     def startMoving(self):
@@ -90,7 +91,7 @@ class RaspiRobot(threading.Thread):
 
     def doMotion(self):
         # Check the sonar reading every fifty iterations
-        if self.timeSinceDistanceScan >= 50:
+        if self.timeSinceDistanceScan >= 20:
             self.distance = self.rr.get_distance()
             self.timeSinceDistanceScan = 0
 
