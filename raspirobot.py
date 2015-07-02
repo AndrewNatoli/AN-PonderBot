@@ -83,6 +83,7 @@ class RaspiRobot(threading.Thread):
 
     # Use CLI command "start" to start the robot
     def startMoving(self):
+        print "RasPi Robot: startMoving"
         self.active = True
 
     # Make the robot stop moving
@@ -125,6 +126,9 @@ class RaspiRobot(threading.Thread):
         # Are we moving? Should we stop?
         if self.direction != self.Directions.stopped:
             self.moveTime += 1
+        # Initiate action-doing!
+        else:
+            self.forward(1)
 
             # If we've been going in a certain direction for too long, stop ourselves.
             if self.moveTime >= self.stopTime:
