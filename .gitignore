@@ -1,0 +1,6 @@
+*.pyc
+devRunner.py
+*.tar
+.idea
+output
+ponderbot-Design.xmind
