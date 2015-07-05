@@ -14,7 +14,7 @@ class SpeechRunner (threading.Thread):
         print "Starting Speech Runner"
         self.okToRun = True
         print "Raising output volume"
-        os.system("amixer sset 'PCM' 100%")
+        os.system("amixer sset 'PCM' 90%")
 
     def speak(self, textToSpeak):
         self.speechQueue.append(textToSpeak)
