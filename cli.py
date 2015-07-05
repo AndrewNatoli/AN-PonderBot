@@ -30,6 +30,14 @@ class CLI(threading.Thread):
                         else:
                             print "Missing second argument: filename."
 
+                    # Say something
+                    elif words[0] == "say" or words[0] == "speak":
+                        if len(words) > 1:
+                            words[0] = "say"
+                            self.stack.append(words)
+                        else:
+                            print "Missing second argument... give me something to say!"
+
                    # Start the robot
                     elif words[0] == "go" or words[0] == "start":
                         words[0] = "start"
